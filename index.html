@@ -72,9 +72,9 @@
   <div id="overlay">
     <div class="overlay-title cyan" id="ov-title">LAST STAND</div>
     <div class="overlay-sub" id="ov-sub">
-      WASD — 이동 &nbsp;|&nbsp; 조준선 — 보스 실시간 완전 자동 고정<br>
+      WASD — 이동 &nbsp;|&nbsp; 조준선 — 보스 실시간 자동 고정<br>
       <span style="color:var(--danger)">마우스 좌클릭 (HOLD) — 보스 추적 레이저 연속 발사</span><br>
-      <span style="color:rgba(255,34,255,0.9)">마우스 우클릭 — 보스 방향 자동 강습 참격 (탄막 확정 소멸)</span>
+      <span style="color:rgba(255,34,255,0.9)">마우스 우클릭 — 보스 방향 자동 강습 참격</span>
     </div>
     <button class="btn" id="start-btn">START</button>
   </div>
@@ -91,7 +91,8 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
 let state = 'title'; let score = 0; let frameCount = 0;
-const PLAYER_SPEED = 4.0; const PLAYER_MAX_HP = 9; const SWORD_COOLDOWN = 140; const SWORD_DURATION = 14; const SWORD_RANGE = 95; const PLAYER_BULLET_SPEED = 17.0; 
+// 탄속 증가 (17.0 -> 24.0)
+const PLAYER_SPEED = 4.0; const PLAYER_MAX_HP = 9; const SWORD_COOLDOWN = 140; const SWORD_DURATION = 14; const SWORD_RANGE = 95; const PLAYER_BULLET_SPEED = 24.0; 
 let player = {}; let bullets = []; let playerBullets = []; let particles = []; let screenShake = 0; let lastSwordReadyState = true; 
 
 function resetPlayer() {
@@ -139,7 +140,6 @@ function updateHPBars() {
 }
 
 function spawnBullet(x, y, vx, vy, r=5, color='#ff2050') { bullets.push({ x, y, vx, vy, r, color, life: 800 }); }
-// 주인공 투사체 색상 변경 (#ff2050 -> 빨간색)
 function spawnPlayerBullet(x, y, vx, vy) { playerBullets.push({ x, y, vx, vy, r: 4, life: 220, color: '#ff2050' }); }
 function spawnParticles(x, y, color, n, speed) { for (let i=0; i<n; i++) { const a = Math.random()*Math.PI*2; const s = speed * (0.5 + Math.random()); particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 30+Math.random()*20, maxLife: 50, color, r: 2+Math.random()*2 }); } }
 
@@ -147,24 +147,13 @@ function bossPattern(phase, timer) {
   const t = timer; const bx = boss.x, by = boss.y; const px = player.x, py = player.y; const toPx = Math.atan2(py-by, px-bx);
   if (phase === 0) {
     if (t % 80 < 15 && t % 5 === 0) {
-      for (let i = -1; i <= 1; i++) {
-        const angle = toPx + (i * 0.25);
-        spawnBullet(bx, by, Math.cos(angle) * 4.0, Math.sin(angle) * 4.0, 5, '#00f5ff');
-      }
+      for (let i = -1; i <= 1; i++) { const angle = toPx + (i * 0.25); spawnBullet(bx, by, Math.cos(angle) * 4.0, Math.sin(angle) * 4.0, 5, '#00f5ff'); }
     }
     if (t % 100 === 0) {
-        for (let j = -4; j <= 4; j++) {
-            const randomOffset = (Math.random() - 0.5) * 0.2;
-            const a = toPx + (j * 0.18) + randomOffset;
-            spawnBullet(bx, by, Math.cos(a) * 3.2, Math.sin(a) * 3.2, 6, '#ff6030');
-        }
+        for (let j = -4; j <= 4; j++) { const randomOffset = (Math.random() - 0.5) * 0.2; const a = toPx + (j * 0.18) + randomOffset; spawnBullet(bx, by, Math.cos(a) * 3.2, Math.sin(a) * 3.2, 6, '#ff6030'); }
     }
     if (t % 150 === 0) {
-        const bulletCount = 20;
-        for (let i = 0; i < bulletCount; i++) {
-            const angle = (i / bulletCount) * Math.PI * 2;
-            spawnBullet(bx, by, Math.cos(angle) * 2.8, Math.sin(angle) * 2.8, 5, '#ffaa00');
-        }
+        const bulletCount = 20; for (let i = 0; i < bulletCount; i++) { const angle = (i / bulletCount) * Math.PI * 2; spawnBullet(bx, by, Math.cos(angle) * 2.8, Math.sin(angle) * 2.8, 5, '#ffaa00'); }
     }
   } else if (phase === 1) {
     if (t % 6 === 0) { const a = t * 0.18; spawnBullet(bx, by, Math.cos(a) * 4.2, Math.sin(a) * 4.2, 5, '#cc44ff'); spawnBullet(bx, by, Math.cos(a+Math.PI) * 4.2, Math.sin(a+Math.PI) * 4.2, 5, '#cc44ff'); }
@@ -186,7 +175,8 @@ function updateBossMovement() {
   if (boss.phase <= 1) { boss.moveAngle += 0.008; const cx = W/2, cy = 180; const tx = cx + Math.cos(boss.moveAngle)*320; const ty = cy + Math.sin(boss.moveAngle)*70; boss.x += (tx - boss.x) * 0.02; boss.y += (ty - boss.y) * 0.02; } else { boss.moveAngle += 0.015; boss.x += boss.vx; boss.y += boss.vy; boss.vx *= 0.96; boss.vy *= 0.96; if (boss.x < 120) { boss.x = 120; boss.vx = Math.abs(boss.vx); } if (boss.x > W-120) { boss.x = W-120; boss.vx = -Math.abs(boss.vx); } if (boss.y < 90) { boss.y = 90; boss.vy = Math.abs(boss.vy); } if (boss.y > H-280) { boss.y = H-280; boss.vy = -Math.abs(boss.vy); } }
 }
 
-function tryShoot() { if (player.shootCooldown > 0) return; const aimAngle = Math.atan2(boss.y - player.y, boss.x - player.x); spawnPlayerBullet(player.x, player.y, Math.cos(aimAngle) * PLAYER_BULLET_SPEED, Math.sin(aimAngle) * PLAYER_BULLET_SPEED); player.shootCooldown = 18; spawnParticles(player.x - Math.cos(aimAngle)*10, player.y - Math.sin(aimAngle)*10, '#ff2050', 3, 1.5); }
+// 사격 간격 감소 (cooldown 18 -> 25)
+function tryShoot() { if (player.shootCooldown > 0) return; const aimAngle = Math.atan2(boss.y - player.y, boss.x - player.x); spawnPlayerBullet(player.x, player.y, Math.cos(aimAngle) * PLAYER_BULLET_SPEED, Math.sin(aimAngle) * PLAYER_BULLET_SPEED); player.shootCooldown = 25; spawnParticles(player.x - Math.cos(aimAngle)*10, player.y - Math.sin(aimAngle)*10, '#ff2050', 3, 1.5); }
 function trySword() { if (player.swordCooldown > 0) return; player.swordTimer = SWORD_DURATION; player.swordCooldown = SWORD_COOLDOWN; player.swordAngle = Math.atan2(boss.y - player.y, boss.x - player.x); screenShake = 12; let cleared = 0; const ALLOWED_DIFF = Math.PI * 0.88; for (let i = bullets.length - 1; i >= 0; i--) { const b = bullets[i]; const distToBullet = Math.hypot(b.x - player.x, b.y - player.y); if (distToBullet <= SWORD_RANGE + b.r + 5) { let diff = Math.atan2(b.y - player.y, b.x - player.x) - player.swordAngle; while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2; if (Math.abs(diff) < ALLOWED_DIFF || distToBullet < 45) { spawnParticles(b.x, b.y, 'rgba(255, 34, 255, 0.5)', 5, 2.5); bullets.splice(i, 1); cleared++; } } } const bossDist = Math.hypot(boss.x - player.x, boss.y - player.y); if (bossDist < SWORD_RANGE + boss.size + 10) { let diff = Math.atan2(boss.y - player.y, boss.x - player.x) - player.swordAngle; while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2; if (Math.abs(diff) < ALLOWED_DIFF || bossDist < 65) { damageBoss(50); spawnParticles(boss.x, boss.y, 'rgba(255, 34, 255, 0.7)', 22, 5); score += 40; } } if (cleared > 0) score += cleared * 5; updateWeaponUI(); }
 
 function updatePlayerShooting() {
@@ -249,9 +239,21 @@ function draw() {
   ctx.globalAlpha = 1;
   for (const b of bullets) { ctx.shadowBlur = 10; ctx.shadowColor = b.color; ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r*0.35, 0, Math.PI*2); ctx.fill(); }
   ctx.shadowBlur = 0;
-  // 주인공 투사체 그리기 (빨간색 적용 확인)
-  for (const pb of playerBullets) { ctx.shadowBlur = 8; ctx.shadowColor = '#ff2050'; ctx.fillStyle = pb.color; ctx.beginPath(); ctx.arc(pb.x, pb.y, pb.r, 0, Math.PI*2); ctx.fill(); }
+  
+  for (const pb of playerBullets) {
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#ff2050';
+    ctx.fillStyle = pb.color;
+    ctx.save();
+    ctx.translate(pb.x, pb.y);
+    ctx.rotate(Math.atan2(pb.vy, pb.vx)); 
+    ctx.beginPath();
+    ctx.roundRect(-8, -3, 16, 6, 3); 
+    ctx.fill();
+    ctx.restore();
+  }
   ctx.shadowBlur = 0;
+  
   const phaseColor = PHASE_COLORS[boss.phase];
   const pulse = Math.sin(boss.glowPulse) * 0.3 + 0.7;
   ctx.shadowBlur = 30 * pulse; ctx.shadowColor = phaseColor;
