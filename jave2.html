@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAST STAND</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+  :root { --bg: #04040a; --panel: #080812; --accent: #00f5ff; --danger: #ff2050; --warn: #ffaa00; --safe: #00ff88; --text: #c8d8ff; --dim: #334466; --sword: rgba(255, 34, 255, 0.6); --sword-glow: rgba(255, 34, 255, 0.2); }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Share Tech Mono', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; user-select: none; }
+  #ui-top { width: 1360px; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding: 0 4px; }
+  .boss-info { flex: 1; }
+  .boss-name { font-family: 'Orbitron', monospace; font-size: 17px; font-weight: 700; letter-spacing: 2px; color: var(--danger); text-shadow: 0 0 10px var(--danger); margin-bottom: 5px; }
+  .phase-label { font-size: 11px; color: var(--warn); letter-spacing: 2px; margin-bottom: 5px; }
+  .hp-bar-wrap { width: 700px; height: 12px; background: #1a0010; border: 1px solid var(--danger); position: relative; overflow: hidden; }
+  .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #ff2050, #ff6030); transition: width 0.1s; box-shadow: 0 0 8px #ff2050; }
+  .player-info { text-align: right; }
+  .player-label { font-size: 11px; color: var(--accent); letter-spacing: 2px; margin-bottom: 5px; }
+  .player-hp-bar-wrap { width: 300px; height: 12px; background: #001020; border: 1px solid var(--accent); margin-left: auto; margin-bottom: 6px; overflow: hidden; }
+  .player-hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00aaff, #00f5ff); transition: width 0.1s; box-shadow: 0 0 8px var(--accent); }
+  .sword-ui-wrap { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-top: 8px; background: rgba(255, 34, 255, 0.02); padding: 5px 10px; border-radius: 4px; border: 1px solid rgba(255, 34, 255, 0.08); }
+  .sword-bar-bg { width: 260px; height: 10px; background: rgba(16, 0, 21, 0.4); border: 1px solid rgba(85, 17, 85, 0.3); border-radius: 2px; overflow: hidden; position: relative; }
+  .sword-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, rgba(0, 180, 255, 0.05) 0%, rgba(255, 34, 255, 0.5) 100%); position: relative; transition: width 0.05s linear; }
+  .sword-bar-fill::after { content: ''; position: absolute; top: 0; right: 0; width: 3px; height: 100%; background: #ffffff; box-shadow: 0 0 6px #ffffff, 0 0 10px var(--accent); }
+  #sword-cd { font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; width: 65px; text-align: right; letter-spacing: 1px; color: rgba(160, 180, 210, 0.7); }
+  #canvas-wrap { position: relative; border: 1px solid #1a2a4a; box-shadow: 0 0 30px #00f5ff11, inset 0 0 60px #00001a; }
+  canvas { display: block; }
+  canvas.playing-active { cursor: none; }
+  #overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(4,4,10,0.92); z-index: 10; }
+  #overlay.hidden { display: none; }
+  .overlay-title { font-family: 'Orbitron', monospace; font-size: 44px; font-weight: 900; letter-spacing: 6px; margin-bottom: 14px; }
+  .overlay-title.red { color: var(--danger); text-shadow: 0 0 20px var(--danger); }
+  .overlay-title.cyan { color: var(--accent); text-shadow: 0 0 20px var(--accent); }
+  .overlay-title.gold { color: var(--warn); text-shadow: 0 0 20px var(--warn); }
+  .overlay-sub { font-size: 14px; color: var(--text); letter-spacing: 1.5px; margin-bottom: 35px; text-align: center; line-height: 1.8; }
+  .btn { font-family: 'Orbitron', monospace; font-size: 15px; font-weight: 700; letter-spacing: 3px; padding: 12px 45px; border: 2px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+  .btn:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 15px var(--accent); }
+  #ui-bottom { width: 1360px; display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); letter-spacing: 1px; margin-top: 10px; padding: 0 4px; }
+  #phase-flash { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Orbitron', monospace; font-size: 36px; font-weight: 900; letter-spacing: 6px; color: var(--danger); text-shadow: 0 0 25px var(--danger); pointer-events: none; opacity: 0; z-index: 5; white-space: nowrap; transition: opacity 0.3s; }
+</style>
+</head>
+<body>
+<div id="ui-top">...</div>
+<div id="canvas-wrap">...</div>
+<div id="ui-bottom">...</div>
+
+<script>
+// [기존 변수 및 함수 로직 생략 - 그대로 유지]
+// ... (resetPlayer, resetBoss, update, draw 등 모든 기존 함수)
+
+// ── Fixed Timestep Loop ────────────────────────────────────────────────────
+const FIXED_STEP = 1000 / 60; // 1초에 60번 고정
+let accumulator = 0;
+let lastTime = 0;
+
+function loop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  let deltaTime = timestamp - lastTime;
+  lastTime = timestamp;
+
+  // 급격한 시간 차이 방지
+  if (deltaTime > 100) deltaTime = 100;
+
+  accumulator += deltaTime;
+
+  // 로직은 60fps로 고정 실행
+  while (accumulator >= FIXED_STEP) {
+    update();
+    accumulator -= FIXED_STEP;
+  }
+
+  // 그리기는 가능한 부드럽게 (모니터 주사율에 맞춰서)
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// 시작
+requestAnimationFrame(loop);
+
+// ... (기타 이벤트 리스너 등)
+</script>
+</body>
+</html>
